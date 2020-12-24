@@ -3,10 +3,10 @@
 As shown in "Arduni RPi Comms.pdf", the Arduino collects sensor data and controls the outputs of the system. The RPi log data to an internal MariaDB database, and calculates the desired outputs, which are then communicated to the Arduino. The RPi also runs a grafana server for data visualtization.
 
 # Current State of Project:
--Serial comms between RPi and Arduino for communicating reset, outputs, and data collection
--Database logging and reading
--Setting one output (fan) - Hardcoded
--Reading data from one sensor (humidity and temp). This should generalize very easily, only need to add fields into database
+- Serial comms between RPi and Arduino for communicating reset, outputs, and data collection
+- Database logging and reading
+- Setting one output (fan) - Hardcoded
+- Reading data from one sensor (humidity and temp). This should generalize very easily, only need to add fields into database
 
 # TODO:
 - Implement resets of Raspberry Pi and Arduino (timeouts)
