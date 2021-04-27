@@ -22,7 +22,7 @@ https://www.raspberrypi.org/software/
 2. Add the file "ssh" (no extensions) to the boot partition of the microSD card
 3. Insert the microSD card into the RPi and power on. Use ethernet to ssh into the RPi. You should now be able to set up wifi using the command raspi-config
 4. Install mariadb, with users, passwords as outline in "mariaDBConnect.py": https://pimylifeup.com/raspberry-pi-mysql/
- 4a. Setup mariadb to start at boot: https://mariadb.com/kb/en/systemd/
-5. Install grafana server (ARMv7 for Debian) and set up to run on boot: https://grafana.com/docs/grafana/latest/installation/debian
-6. Set up your python script to run in the background on boot: https://www.raspberrypi-spy.co.uk/2015/02/how-to-autorun-a-python-script-on-raspberry-pi-boot/
-7. Optional: Install Arduino CLI to compile and run arduino code from RPi: https://www.arduino.cc/pro/cli
+5. Setup mariadb to start at boot: https://mariadb.com/kb/en/systemd/
+6. Install grafana server (ARMv7 for Debian) and set up to run on boot: https://grafana.com/docs/grafana/latest/installation/debian
+7. Set up your python script to run in the background on boot: https://www.raspberrypi-spy.co.uk/2015/02/how-to-autorun-a-python-script-on-raspberry-pi-boot/
+8. Optional: Install Arduino CLI to compile and run arduino code from RPi: https://www.arduino.cc/pro/cli
