@@ -7,6 +7,7 @@ import csv
 import mariadb_connect as dbConn
 
 
+# Return type: list of Strings
 def o_fields():
     try:
         return read_config()['outputs']
@@ -14,6 +15,7 @@ def o_fields():
         print("ERROR: Failed to read config file: " + str(error))
 
 
+# Return type: list of Strings
 def i_fields():
     try:
         return read_config()['inputs']
@@ -21,13 +23,47 @@ def i_fields():
         print("ERROR: Failed to read config file: " + str(error))
 
 
+# Return type: int
 def max_o_val():
     try:
-        return read_config()['maxOutputVal']
+        return int(read_config()['maxOutputVal'][0])
     except Exception as error:
         print("ERROR: Failed to read config file: " + str(error))
 
 
+# Return type: int
+def data_log_int():
+    try:
+        return int(read_config()['dataLogInt_s'][0])
+    except Exception as error:
+        print("ERROR: Failed to read config file: " + str(error))
+
+
+# Return type: String
+def arduino_port():
+    try:
+        return read_config()['arduinoPort'][0]
+    except Exception as error:
+        print("ERROR: Failed to read config file: " + str(error))
+
+
+# Return type: int
+def arduino_baud():
+    try:
+        return int(read_config()['arduinoBaud'][0])
+    except Exception as error:
+        print("ERROR: Failed to read config file: " + str(error))
+
+
+# Return type: int
+def arduino_timeout():
+    try:
+        return int(read_config()['arduinoTimeOut_s'][0])
+    except Exception as error:
+        print("ERROR: Failed to read config file: " + str(error))
+
+
+# Reads the configuration files into a dictionary
 def read_config():
     with open('../config.csv', newline='') as configfile:
         reader = csv.reader(configfile, delimiter=',')

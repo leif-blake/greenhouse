@@ -6,13 +6,14 @@ from datetime import datetime
 # LOCAL MODULES
 import mariadb_connect as dbConn
 import arduino_serial
+import config
 
 # GLOBAL VARS
-dataLogInt = 20  # Logging interval in seconds
-port = 'ttyUSB0'
+dataLogInt = config.data_log_int()  # Logging interval in seconds
+port = config.arduino_port()
 arduino = arduino_serial.ArduinoSerial(port='/dev' + port,
-                                       baud=11500,
-                                       timeout_s=10)
+                                       baud=config.arduino_baud(),
+                                       timeout_s=config.arduino_timeout())
 
 
 # FUNCTIONS
