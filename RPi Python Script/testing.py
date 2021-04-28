@@ -1,3 +1,5 @@
+import mariadbConnect as dbConn
+
 ioIDs = {
 	1:"T1",
 	2:"T2",
@@ -28,7 +30,7 @@ print(names)
 print(values)
 
 
-def logDataDB(data):
+def log_data_db(data):
 	names = ""
 	values = []
 	for item in data:
@@ -39,6 +41,6 @@ def logDataDB(data):
 	names = names[:-2]
 	values = tuple(values)
 
-	conn = openLogConnection()
+	conn = dbConn.open_log_conn()
 	cur = conn.cursor()
 	
