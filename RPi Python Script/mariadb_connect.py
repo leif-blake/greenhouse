@@ -1,13 +1,12 @@
 # A collection of functions to read and store data from/to the mariadb database.
 # NOTE: Includes passwords for database: should be password protected
 
+# IMPORTS
 from datetime import datetime
 import mariadb
 
-# GLOBAL VARS
-outputFields = ['F1']
-NUM_OUT = 1
-NUM_IN = 8
+# LOCAL MODULES
+import config
 
 
 # FUNCTIONS
@@ -64,7 +63,8 @@ def log_data_db(parsed_data):
     conn.close()
 
 
-# Read sensor data from database
+# Read sensor data from database, returns as double list of integers.
+# Columns are sensors, rows are entries
 def get_data_db(entries=1):
     conn = open_view_conn()
     cur = conn.cursor()
@@ -77,8 +77,9 @@ def get_data_db(entries=1):
     db_data = cur.fetchall()
     conn.close()
 
+    # Convert all values from database from strings into integers
     for i in range(0, entries):
-        for j in range(0, NUM_OUT):
+        for j in range(0, len(db_data[i])):
             db_data[i][j] = int(db_data[i][j])
 
     return db_data
@@ -98,7 +99,7 @@ def get_outputs_db(entries=1):
     conn.close()
 
     for i in range(0, entries):
-        for j in range(0, NUM_IN):
+        for j in range(0, len(db_outputs[i])):
             db_outputs[i][j] = int(db_outputs[i][j])
 
     return db_outputs
@@ -106,25 +107,16 @@ def get_outputs_db(entries=1):
 
 # Write output states to database
 def log_outputs_db(output_vals):
-    conn = open_log_conn()
-    cur = conn.cursor()
-
-    try:
-        cur.execute('INSERT INTO greenhouse.output ('
-                    + outputFields + 'timestamp) VALUES ('
-                    + output_vals + '\''
-                    + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\')')
-    except Exception as error:
-        print("ERROR: Failed to log to database: " + str(error))
-
-    conn.close()
     # retrieve most recent output entry from database
     db_outputs = get_outputs_db()[0]
 
     # Check for manual overrides in latest entry
-    for i in range(0, NUM_OUT):
-        if db_outputs[i] > 9:  # indicates manual override
-            output_vals[i] = db_outputs
+    try:
+        for i in range(0, len(db_outputs)):
+            if db_outputs[i] > config.max_o_val():  # indicates manual override
+                output_vals[i] = db_outputs
+    except Exception as error:
+        print("ERROR: Failed to compare current and desired outputs: " + str(error))
 
     # Write outputs to database
     conn = open_log_conn()
@@ -132,10 +124,26 @@ def log_outputs_db(output_vals):
 
     try:
         cur.execute('INSERT INTO greenhouse.output ('
-                    + outputFields + 'timestamp) VALUES ('
+                    + config.o_fields() + 'timestamp) VALUES ('
                     + output_vals + '\''
                     + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\')')
     except Exception as error:
         print("ERROR: Failed to log to database: " + str(error))
 
     conn.close()
+
+
+# Returns a list of the fields for the database from a specified table
+def get_fields_db(table):
+    conn = open_view_conn()
+    cur = conn.cursor()
+
+    try:
+        cur.excecute("SHOW COLUMNS FROM greenhouse." + table)
+    except Exception as error:
+        print("ERROR: Failed to get data from database: " + str(error))
+
+    db_table = cur.fetchall()
+    conn.close()
+
+    db_fields = []

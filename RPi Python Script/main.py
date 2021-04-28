@@ -3,7 +3,7 @@ from time import sleep
 from serial import Serial
 from datetime import datetime
 
-# LOCAL FUNCTION MODULES
+# LOCAL MODULES
 import mariadb_connect as dbConn
 import arduino_serial
 
@@ -53,7 +53,7 @@ def msg_received(parsed_data):
     print('LOG: Command \'' + parsed_data[0] + '\' successfully received by arduino')
 
 
-# Arduino received unknown command
+# Process error when Arduino received unknown command
 def proc_err(parsed_data):
     print('Error: Arduino unable to process command: ' + parsed_data[0])
 

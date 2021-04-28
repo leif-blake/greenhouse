@@ -38,7 +38,7 @@ class ArduinoSerial(Serial):
         try:
             return self.arduino.readline()
         except Exception as error:
-            print("ERROR: Failed to read from arduino while awaiting data from Arduino: " + str(error))
+            print("ERROR: Failed to read from Arduino: " + str(error))
 
     def write(self, data):
         try:
@@ -47,7 +47,7 @@ class ArduinoSerial(Serial):
             print("ERROR: Failed to write to Arduino: " + str(error))
 
     def get_data(self):
-        self.write("log;".encode())
+        self.write("log;")
         input_data = self.read_line()
 
         return input_data
