@@ -1,7 +1,7 @@
-inputs,T1,H1,T2,H2,T3,H3
+inputs,T1,T2,T3,T4,M1,M2,M3,M4
 ouputs,F1
 maxOutputVal,10
 dataLogInt_s,20
-arduinoPort,ttyUSB0
+arduinoPort,/dev/ttyACM0
 arduinoBaud,11500
 arduinoTimeOut_s,5

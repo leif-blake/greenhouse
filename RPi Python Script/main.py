@@ -10,8 +10,7 @@ import config
 
 # GLOBAL VARS
 dataLogInt = config.data_log_int()  # Logging interval in seconds
-port = config.arduino_port()
-arduino = arduino_serial.ArduinoSerial(port='/dev' + port,
+arduino = arduino_serial.ArduinoSerial(port=config.arduino_port(),
                                        baud=config.arduino_baud(),
                                        timeout_s=config.arduino_timeout())
 
