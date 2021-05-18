@@ -27,6 +27,7 @@ void setup() {
 
     pinMode(COOL_FAN, OUTPUT);
     TM1.begin();
+    TM2.begin();
 }
 
 void loop() {
@@ -92,11 +93,16 @@ void setOutput(String output, int outVal){
 void logData(){
   T1 = TM1.readTemperature();
   M1 = TM1.readHumidity();
-
-
+  T2 = TM2.readTemperature();
+  M2 = TM2.readHumidity();
+  
   Serial.print("dta;T1,");
   Serial.print(T1);
   Serial.print(";M1,");
   Serial.print(M1);
+  Serial.print(";T2,");
+  Serial.print(T2);
+  Serial.print(";M2,");
+  Serial.print(M2);
   Serial.println();
 }

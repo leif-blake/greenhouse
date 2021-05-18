@@ -2,6 +2,15 @@
 # IMPORTS
 from serial import Serial
 from time import sleep
+import config
+import logging
+
+# LOCAL MODULES
+from logger_setup import setupLog
+
+# LOGGING
+logger = logging.getLogger(__name__)
+setupLog(logger)
 
 
 class ArduinoSerial(Serial):
@@ -11,40 +20,52 @@ class ArduinoSerial(Serial):
     timeout_s = None
 
     # initialization
-    def __init__(self, port, baud, timeout_s):
-        self.port = port
-        self.baud = baud
-        self.timeout_s = timeout_s
-        self.arduino = Serial('/dev/' + port,
-                              baudrate=baud,
-                              timeout=timeout_s,
-                              )
+    def __init__(self):
+        try:
+            port = config.arduino_port()
+            baud = config.arduino_baud()
+            timeout_s = config.arduino_timeout()
+            try:
+                self.arduino = Serial(port=port,
+                                      baudrate=baud,
+                                      timeout=timeout_s)
+            except:
+                logger.exception('Failed to init Serial')
+        except:
+            logger.exception('Failed to get config params')
 
     def is_open(self):
-        return self.arduino.is_open
+        try:
+            return self.arduino.is_open
+        except:
+            logger.exception('Failed to get status of Serial')
 
     def open(self):
         try:
             self.arduino.open()
             return True
-        except Exception as error:
-            print("ERROR: Failed to connect on " + str(self.port) + ": " + str(error))
+        except:
+            logger.exception('Failed to connect on ' + str(self.port))
             return False
 
     def close(self):
-        self.arduino.close()
+        try:
+            self.arduino.close()
+        except:
+            logger.exception('Failed to close Serial')
 
     def read_line(self):
         try:
             return self.arduino.readline()
-        except Exception as error:
-            print("ERROR: Failed to read from Arduino: " + str(error))
+        except:
+            logger.exception('Failed to read from Arduino')
+            return ''
 
     def write(self, data):
         try:
             self.arduino.write(data.encode())
-        except Exception as error:
-            print("ERROR: Failed to write to Arduino: " + str(error))
+        except:
+            logger.exception('Failed to write to Arduino')
 
     def get_data(self):
         self.write("log;")
@@ -55,7 +76,7 @@ class ArduinoSerial(Serial):
     def reset(self):
         self.arduino.setDTR(False)
         sleep(1)
-        # toss any data already received, see
+        # toss any data already received
         self.arduino.flushInput()
         self.arduino.setDTR(True)
 
@@ -66,4 +87,4 @@ class ArduinoSerial(Serial):
             output_string += (output_fields[i] + ","
                               + str(output_vals[i]) + ";")
 
-        self.write(output_string.encode())
+        self.write(output_string)

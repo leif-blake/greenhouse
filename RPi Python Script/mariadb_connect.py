@@ -4,10 +4,15 @@
 # IMPORTS
 from datetime import datetime
 import mariadb
+import logging
 
 # LOCAL MODULES
 import config
+from logger_setup import setupLog
 
+# LOGGING
+logger = logging.getLogger(__name__)
+setupLog(logger)
 
 # FUNCTIONS
 # Settings for opening a connection to the MariaDB database for logging data
@@ -18,8 +23,8 @@ def open_log_conn():
             password="lumbernotlogs",
             host="localhost",
             port=3306)
-    except Exception as error:
-        print("ERROR: Failed to connect to MariaDB as logger: " + str(error))
+    except:
+        logger.exception('Failed to connect to MariaDB as logger')
     return conn
 
 
@@ -31,8 +36,8 @@ def open_view_conn():
             password="showmethatdata",
             host="localhost",
             port=3306)
-    except Exception as error:
-        print("ERROR: failed to connect to MariaDB as viewer: " + str(error))
+    except:
+        logger.exception('Failed to connect to MariaDB as viewer')
     return conn
 
 
@@ -41,25 +46,26 @@ def log_data_db(parsed_data):
     fields = ''
     values = ''
     # Split data into fields and values by comma delimiter
-    for item in parsed_data:
+    for item in parsed_data:  # fix for non-operational temperature/humidity sensors
         keyValPair = item.split(',')
-        fields += keyValPair[0]
-        fields += ", "
-        values += keyValPair[1]
-        values += ", "
-
-    conn = open_log_conn()
-    cur = conn.cursor()
+        if not keyValPair[1] == 'nan':
+            fields += keyValPair[0]
+            fields += ", "
+            values += keyValPair[1]
+            values += ", "
+    # print('DEBUG: fields: ' + fields)
+    # print('DEBUG: values: ' + values)
 
     # Log sensor values and fields into database
+    conn = open_log_conn()
+    cur = conn.cursor()
     try:
         cur.execute('INSERT INTO greenhouse.data ('
                     + fields + 'timestamp) VALUES ('
                     + values + '\''
                     + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\')')
-    except Exception as error:
-        print("ERROR: Failed to log to database: " + str(error))
-
+    except:
+        logger.exception('Failed to log to database')
     conn.close()
 
 
@@ -70,19 +76,14 @@ def get_data_db(entries=1):
     cur = conn.cursor()
 
     try:
-        cur.excecute("SELECT * from greenhouse.data ORDER BY timestamp DESC LIMIT " + str(entries))
-    except Exception as error:
-        print("ERROR: Failed to get data from database: " + str(error))
+        cur.execute("SELECT * from greenhouse.data ORDER BY timestamp DESC LIMIT " + str(entries))
+    except:
+        logger.exception('Failed to get data from database')
 
     db_data = cur.fetchall()
     conn.close()
 
-    # Convert all values from database from strings into integers
-    for i in range(0, entries):
-        for j in range(0, len(db_data[i])):
-            db_data[i][j] = int(db_data[i][j])
-
-    return db_data
+    return db_data_to_list(db_data, entries=entries)
 
 
 # Read output states from database
@@ -91,32 +92,48 @@ def get_outputs_db(entries=1):
     cur = conn.cursor()
 
     try:
-        cur.excecute("SELECT * from greenhouse.output ORDER BY timestamp DESC LIMIT " + str(entries))
-    except Exception as error:
-        print("ERROR: Failed to get data from database: " + str(error))
+        cur.execute("SELECT * from greenhouse.output ORDER BY timestamp DESC LIMIT " + str(entries))
+    except:
+        logger.exception('Failed to get data from database')
 
     db_outputs = cur.fetchall()
+    print("DEBUG: Current database outputs: ")
+    print(db_outputs)
     conn.close()
 
-    for i in range(0, entries):
-        for j in range(0, len(db_outputs[i])):
-            db_outputs[i][j] = int(db_outputs[i][j])
+    return db_data_to_list(db_outputs, entries=entries)
 
-    return db_outputs
+
+# Takes list of tuples and return 2D list of integers (excepting timestamp)
+def db_data_to_list(db_tuples, entries):
+    db_lists = []
+    # Convert tuples into lists
+    try:
+        for i in range(0, entries):
+            db_lists[i] = list(db_tuples[i])
+    except:
+        logger.exception('Failed to convert tuples to lists')
+    # Convert all values from database from strings into integers
+    for i in range(0, entries):
+        try:
+            for j in range(0, len(db_lists[i]) - 1):  # last value in row is timestamp
+                db_lists[i][j] = int(db_lists[i][j])
+        except:
+            logger.exception('Failed to convert output' + str(i) + ' to integer: ' + str(error))
 
 
 # Write output states to database
 def log_outputs_db(output_vals):
     # retrieve most recent output entry from database
-    db_outputs = get_outputs_db()[0]
+    db_outputs = (get_outputs_db())[0]
 
     # Check for manual overrides in latest entry
     try:
         for i in range(0, len(db_outputs)):
             if db_outputs[i] > config.max_o_val():  # indicates manual override
                 output_vals[i] = db_outputs
-    except Exception as error:
-        print("ERROR: Failed to compare current and desired outputs: " + str(error))
+    except:
+        logger.exception('Failed to compare current and desired outputs')
 
     # Write outputs to database
     conn = open_log_conn()
@@ -127,8 +144,8 @@ def log_outputs_db(output_vals):
                     + config.o_fields() + 'timestamp) VALUES ('
                     + output_vals + '\''
                     + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\')')
-    except Exception as error:
-        print("ERROR: Failed to log to database: " + str(error))
+    except:
+        logger.exception('Failed to write to database')
 
     conn.close()
 
@@ -140,8 +157,8 @@ def get_fields_db(table):
 
     try:
         cur.excecute("SHOW COLUMNS FROM greenhouse." + table)
-    except Exception as error:
-        print("ERROR: Failed to get data from database: " + str(error))
+    except:
+        logger.exception('Failed to get data from database')
 
     db_table = cur.fetchall()
     conn.close()
