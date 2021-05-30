@@ -36,9 +36,9 @@ def open_view_conn():
             password="showmethatdata",
             host="localhost",
             port=3306)
+        return conn
     except:
         logger.exception('Failed to connect to MariaDB as viewer')
-    return conn
 
 
 # Write parsed sensor data to database
@@ -48,13 +48,11 @@ def log_data_db(parsed_data):
     # Split data into fields and values by comma delimiter
     for item in parsed_data:  # fix for non-operational temperature/humidity sensors
         keyValPair = item.split(',')
-        if not keyValPair[1] == 'nan':
+        if not keyValPair[1] == 'nan':  # return value from uninitialized temp/humid sensor
             fields += keyValPair[0]
             fields += ", "
             values += keyValPair[1]
             values += ", "
-    # print('DEBUG: fields: ' + fields)
-    # print('DEBUG: values: ' + values)
 
     # Log sensor values and fields into database
     conn = open_log_conn()
@@ -69,71 +67,86 @@ def log_data_db(parsed_data):
     conn.close()
 
 
-# Read sensor data from database, returns as double list of integers.
-# Columns are sensors, rows are entries
-def get_data_db(entries=1):
+# Read data from database, returns as dictionary
+# Columns are sensors/outputs, rows are entries
+def query_db(table, entries=1):
     conn = open_view_conn()
     cur = conn.cursor()
 
     try:
-        cur.execute("SELECT * from greenhouse.data ORDER BY timestamp DESC LIMIT " + str(entries))
+        cur.execute('SELECT * from greenhouse.' + table + ' ORDER BY timestamp DESC LIMIT ' + str(entries))
     except:
         logger.exception('Failed to get data from database')
 
-    db_data = cur.fetchall()
-    conn.close()
-
-    return db_data_to_list(db_data, entries=entries)
-
-
-# Read output states from database
-def get_outputs_db(entries=1):
-    conn = open_view_conn()
-    cur = conn.cursor()
-
+    db_dict = {}
+    db_data = []
+    db_columns = []
     try:
-        cur.execute("SELECT * from greenhouse.output ORDER BY timestamp DESC LIMIT " + str(entries))
+        # Filtering results of query and creating a dictionary
+        db_data = transpose(cur.fetchall())
+        db_columns = [i[0] for i in cur.description]
+        db_dict = {db_columns[i]: db_data[i] for i in range(len(db_columns))}
     except:
-        logger.exception('Failed to get data from database')
+        logger.exception('Failed to create dictionary from query results')
 
-    db_outputs = cur.fetchall()
-    print("DEBUG: Current database outputs: ")
-    print(db_outputs)
+    logger.debug('Dictionary: ' + str(db_dict))
+    # logger.debug('descr: ' + str(cur.description))
+    # logger.debug('db_data: ' + str(db_data))
+    # logger.debug('db_columns: ' + str(db_columns))
+    # logger.debug('len(db_columns): ' + str(len(db_columns)))
+
     conn.close()
+    return db_dict
 
-    return db_data_to_list(db_outputs, entries=entries)
 
-
-# Takes list of tuples and return 2D list of integers (excepting timestamp)
-def db_data_to_list(db_tuples, entries):
-    db_lists = []
-    # Convert tuples into lists
-    try:
-        for i in range(0, entries):
-            db_lists[i] = list(db_tuples[i])
-    except:
-        logger.exception('Failed to convert tuples to lists')
-    # Convert all values from database from strings into integers
-    for i in range(0, entries):
-        try:
-            for j in range(0, len(db_lists[i]) - 1):  # last value in row is timestamp
-                db_lists[i][j] = int(db_lists[i][j])
-        except:
-            logger.exception('Failed to convert output' + str(i) + ' to integer: ' + str(error))
+# Takes list/tuple of tuples and returns 2D list
+# def db_data_to_list(db_tuples, entries=1):
+#     db_lists = []
+#     # Convert tuples into lists
+#     try:
+#         for i in range(0, entries):
+#             db_lists.append(list(db_tuples[i]))
+#     except:
+#         logger.exception('Failed to convert tuples to lists')
+#         logger.debug('List of tuples: ' + str(db_tuples))
+#
+#     # Convert all values from database from strings into integers
+#     # for i in range(0, entries):
+#     #     for j in range(0, len(db_lists[i])):
+#     #         try:
+#     #             if str.isdigit(db_lists[i][j]):  # Check if item can be converted to integer
+#     #                 db_lists[i][j] = int(db_lists[i][j])
+#     #         except:
+#     #             logger.exception('Failed to convert item ' + str(i) + ',' + str(j) + ' to integer: ')
+#     #             logger.debug('outputs: ' + str(db_lists))
+#
+#     return db_lists
 
 
 # Write output states to database
-def log_outputs_db(output_vals):
+def log_outputs_db(new_output_dict):
     # retrieve most recent output entry from database
-    db_outputs = (get_outputs_db())[0]
+    db_outputs = query_db('output')
 
     # Check for manual overrides in latest entry
+    for key in new_output_dict:
+        try:
+            if db_outputs[key][0] > config.max_o_val():  # indicates manual override
+                new_output_dict[key] = db_outputs[key][0]
+        except:
+            logger.exception('Failed to compare current and desired outputs')
+
+    fields = ''
+    values = ''
     try:
-        for i in range(0, len(db_outputs)):
-            if db_outputs[i] > config.max_o_val():  # indicates manual override
-                output_vals[i] = db_outputs
+        for key, val in new_output_dict.items():
+            logger.debug('key: ' + key)
+            fields += key
+            fields += ','
+            values += str(val)
+            values += ','
     except:
-        logger.exception('Failed to compare current and desired outputs')
+        logger.exception('Failed to create db write strings')
 
     # Write outputs to database
     conn = open_log_conn()
@@ -141,8 +154,8 @@ def log_outputs_db(output_vals):
 
     try:
         cur.execute('INSERT INTO greenhouse.output ('
-                    + config.o_fields() + 'timestamp) VALUES ('
-                    + output_vals + '\''
+                    + fields + 'timestamp) VALUES ('
+                    + values + '\''
                     + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\')')
     except:
         logger.exception('Failed to write to database')
@@ -151,16 +164,21 @@ def log_outputs_db(output_vals):
 
 
 # Returns a list of the fields for the database from a specified table
-def get_fields_db(table):
-    conn = open_view_conn()
-    cur = conn.cursor()
+# def get_fields_db(table):
+#     conn = open_view_conn()
+#     cur = conn.cursor()
+#
+#     try:
+#         cur.excecute("SHOW COLUMNS FROM greenhouse." + table)
+#     except:
+#         logger.exception('Failed to get data from database')
+#
+#     db_fields = cur.()
+#     conn.close()
+#
+#     db_fields = []
 
-    try:
-        cur.excecute("SHOW COLUMNS FROM greenhouse." + table)
-    except:
-        logger.exception('Failed to get data from database')
 
-    db_table = cur.fetchall()
-    conn.close()
-
-    db_fields = []
+# Transposes a 2d list/tuple and returns the result
+def transpose(list_2d):
+    return [[row[i] for row in list_2d] for i in range(len(list_2d[0]))]

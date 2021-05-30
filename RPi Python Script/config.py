@@ -16,19 +16,19 @@ setupLog(logger)
 
 
 # Return type: list of Strings
-def o_fields():
-    try:
-        return read_config()['outputs']
-    except:
-        logger.exception('Failed to read config file')
-
-
-# Return type: list of Strings
-def i_fields():
-    try:
-        return read_config()['inputs']
-    except:
-        logger.exception('Failed to read config file')
+# def o_fields():
+#     try:
+#         return read_config()['outputs']
+#     except:
+#         logger.exception('Failed to read config file')
+#
+#
+# # Return type: list of Strings
+# def i_fields():
+#     try:
+#         return read_config()['inputs']
+#     except:
+#         logger.exception('Failed to read config file')
 
 
 # Return type: int
@@ -49,12 +49,11 @@ def data_log_int():
 
 # Return type: String
 # Gets port from arduino-cli command, then updates the config file and returns the port
-def arduino_port():
+def arduino_port(curr_port='/dev/ttyACM0'):
     try:
         # Capture the port of the arduino (takes first Arduino in list, assumes Arduino is connected)
         boardList = subprocess.run(['arduino-cli', 'board', 'list'], capture_output=True)
         boardListSplit = str(boardList).split('\\n')
-        print(boardListSplit)
         port = boardListSplit[1].split(' ')[0]
 
         # Read the configuration files into a dictionary, replace the port with the correct port
@@ -71,6 +70,7 @@ def arduino_port():
         return port
     except:
         logger.exception('Failed to read config file')
+        return curr_port
 
 
 # Return type: int
@@ -101,8 +101,3 @@ def read_config():
         return config_dict
     except:
         logger.exception('Failed to read config file')
-
-# TODO: Implement function that updates config.csv AND edits+recompiles Arduino code
-# def update_io():
-#     oFields = dbConn.get_fields_db('output')
-#     iFields = dbConn.get_fields_db('data')
